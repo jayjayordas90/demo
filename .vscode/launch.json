@@ -1,0 +1,15 @@
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+
+        {
+            "type": "java",
+            "name": "PaperKite with JavaFX",
+            "request": "launch",
+            "mainClass": "com.example.PaperKite",
+            "vmArgs": "--module-path \"C:/Program Files/Java/javafx-sdk-27/lib\" --add-modules javafx.controls"
+        }
+    ]
+}
