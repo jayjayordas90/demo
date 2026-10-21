@@ -40,8 +40,7 @@ public class LoginPage extends AuthPage {
         login.setOnAction(e -> attemptLogin());
         password.setOnAction(e -> attemptLogin());   // pressing Enter submits
 
-        Button register = new Button("No account yet? Create one");
-        register.setStyle("-fx-background-color: transparent; -fx-underline: true;");
+        Button register = UI.flat("No account yet? Create one", null, false);
         register.setOnAction(e -> nav.showRegister());
 
         return new VBox(12, notice, UI.labeled("Username", username), UI.labeled("Password", password),

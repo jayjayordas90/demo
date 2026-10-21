@@ -17,6 +17,8 @@ import javafx.scene.layout.VBox;
 
 public class ReportFormPage extends DashboardPage {
 
+    private static final int MAX_LENGTH = 1000;
+
     private final String preselectedType;
 
     public ReportFormPage(Navigator nav, String preselectedType) {
@@ -28,28 +30,33 @@ public class ReportFormPage extends DashboardPage {
 
     @Override
     protected Node buildContent() {
-        VBox content = new VBox(12);
-        content.setPadding(new Insets(30));
-        content.setMaxWidth(650);
-
         ComboBox<String> typeBox = new ComboBox<>();
         typeBox.getItems().addAll("Bullying", "Harassment", "Other");
         typeBox.setPromptText("Select type");
-        typeBox.setPrefWidth(400);
+        typeBox.setPrefWidth(300);
         if (typeBox.getItems().contains(preselectedType)) {
             typeBox.setValue(preselectedType);
         }
 
         TextArea what = new TextArea();
-        what.setPromptText("Describe what happened...");
-        what.setPrefRowCount(4);
+        what.setPromptText("Describe what happened, in your own words...");
+        what.setPrefRowCount(5);
         what.setWrapText(true);
+        Label counter = UI.muted("0 / " + MAX_LENGTH);
+        what.textProperty().addListener((obs, oldText, newText) -> {
+            if (newText.length() > MAX_LENGTH) {
+                what.setText(oldText);
+                return;
+            }
+            counter.setText(newText.length() + " / " + MAX_LENGTH);
+        });
 
         TextField where = new TextField();
         where.setPromptText("e.g. Classroom, hallway, online...");
 
         DatePicker date = new DatePicker();
         date.setPromptText("Select date");
+        date.setPrefWidth(200);
         TextField time = new TextField();
         time.setPromptText("Time (e.g. 2:30 PM)");
         HBox when = new HBox(10, date, time);
@@ -58,9 +65,9 @@ public class ReportFormPage extends DashboardPage {
         who.setPromptText("You may leave this blank.");
 
         Label error = UI.errorLabel();
-        Button clear = UI.button("Clear", false);
-        clear.setPrefWidth(100);
-        Button submit = UI.button("➤  Submit Anonymously", true);
+        Button clear = UI.button("Clear", "close", false);
+        clear.setPrefWidth(120);
+        Button submit = UI.button("Submit Anonymously", "send", true);
 
         clear.setOnAction(e -> {
             typeBox.setValue(null);
@@ -87,17 +94,27 @@ public class ReportFormPage extends DashboardPage {
         HBox buttons = new HBox(10, clear, submit);
         buttons.setAlignment(Pos.CENTER_RIGHT);
 
-        content.getChildren().addAll(
-                UI.heading("Report an Incident", 26),
-                UI.muted("Please fill in the form below. Fields marked * are required."),
+        Label whenLabel = new Label("4. When did it happen?");
+        whenLabel.getStyleClass().add("field-label");
+
+        VBox form = new VBox(14,
                 UI.labeled("1. Type of incident *", typeBox),
-                UI.labeled("2. What happened? *", what),
+                UI.labeled("2. What happened? *", what), counter,
                 UI.labeled("3. Where did it happen?", where),
-                new Label("4. When did it happen?"), when,
-                UI.labeled("5. Who was involved? (Optional)", who),
-                error, buttons,
-                UI.muted("🛡 Reviewers never see your name. "
-                        + "If you are logged in, the report is linked to your account only so you can track it."));
-        return content;
+                new VBox(6, whenLabel, when),
+                UI.labeled("5. Who was involved? (optional)", who),
+                error, buttons);
+        form.setPadding(new Insets(26));
+        form.setMaxWidth(720);
+        form.getStyleClass().add("card");
+
+        HBox safe = UI.safeBanner("Reviewers never see your name. If you are logged in, the report is linked to "
+                + "your account only so you can follow its progress and read replies.");
+        safe.setMaxWidth(720);
+
+        VBox page = new VBox(18, UI.heading("Report an Incident", 28),
+                UI.muted("Take your time. Fields marked * are required."), safe, form);
+        page.setPadding(new Insets(32));
+        return page;
     }
 }

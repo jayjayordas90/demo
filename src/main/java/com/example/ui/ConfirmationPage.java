@@ -1,14 +1,19 @@
 package com.example.ui;
 
 import com.example.model.Report;
+import javafx.animation.Interpolator;
+import javafx.animation.ScaleTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+import javafx.util.Duration;
 
 public class ConfirmationPage extends Page {
 
@@ -21,24 +26,47 @@ public class ConfirmationPage extends Page {
 
     @Override
     public Parent build() {
-        VBox content = new VBox(20);
-        content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(40));
-        content.setStyle("-fx-background-color: #f8f8f8;");
+        StackPane check = UI.iconBadge("check", "success", 96);
+        check.setScaleX(0.2);
+        check.setScaleY(0.2);
+        ScaleTransition grow = new ScaleTransition(Duration.millis(500), check);
+        grow.setToX(1);
+        grow.setToY(1);
+        grow.setInterpolator(Interpolator.EASE_OUT);
+        grow.play();
 
-        Label check = new Label("✓");
-        check.setFont(Font.font(60));
-
-        Label message = new Label("Thank you for speaking up.\nYour report will be reviewed securely.");
+        Label message = UI.muted("Thank you for speaking up.\nYour report will be reviewed securely by trusted staff.");
         message.setTextAlignment(TextAlignment.CENTER);
+        message.setAlignment(Pos.CENTER);
 
-        Button another = UI.button("Submit Another Report", true);
-        Button home = UI.button("Back to Home", false);
+        VBox reference = new VBox(4, UI.muted("Your reference number"), UI.heading(report.getReferenceNo(), 24));
+        reference.setAlignment(Pos.CENTER);
+        reference.getStyleClass().add("ref-box");
+        reference.setMaxWidth(Double.MAX_VALUE);
+
+        Button copy = UI.button("Copy reference number", "reports", false);
+        copy.setOnAction(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(report.getReferenceNo());
+            Clipboard.getSystemClipboard().setContent(content);
+            copy.setText("Copied!");
+            copy.setGraphic(Icon.of("check"));
+        });
+        Button another = UI.button("Submit Another Report", "add", true);
+        Button home = UI.button("Back to Home", "home", false);
         another.setOnAction(e -> nav.showReportForm("Other"));
         home.setOnAction(e -> nav.showHome());
 
-        content.getChildren().addAll(check, UI.heading("Your report has been received.", 26), message,
-                UI.heading("Reference Number: " + report.getReferenceNo(), 16), another, home);
-        return content;
+        VBox card = new VBox(16, check, UI.heading("Your report has been received", 24), message,
+                reference, copy, another, home);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(36));
+        card.setMaxWidth(440);
+        card.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        card.getStyleClass().add("card");
+
+        StackPane root = new StackPane(card);
+        root.getStyleClass().add("auth-bg");
+        return root;
     }
 }

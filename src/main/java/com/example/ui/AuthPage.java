@@ -5,6 +5,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -29,21 +30,30 @@ public abstract class AuthPage extends Page {
 
     @Override
     public final Parent build() {
-        VBox box = new VBox(14, UI.heading(title(), 26), UI.muted(subtitle()), form());
+        StackPane logo = new StackPane(Logo.of(80));
+        logo.setAlignment(Pos.CENTER_LEFT);
+
+        VBox box = new VBox(14, logo, UI.heading(title(), 26), UI.muted(subtitle()), form());
         if (showBackButton()) {
-            Button back = new Button("← Back");
-            back.setStyle("-fx-background-color: transparent; -fx-text-fill: gray;");
+            Button back = UI.flat("Back", "back", false);
             back.setOnAction(e -> nav.showWelcome());
             box.getChildren().add(back);
         }
-        box.setPadding(new Insets(30));
-        box.setMaxWidth(400);
+        box.setPadding(new Insets(32));
+        box.setMaxWidth(430);
         box.setMaxHeight(Region.USE_PREF_SIZE);
-        box.setStyle(UI.CARD_STYLE);
+        box.getStyleClass().add("card");
 
-        StackPane root = new StackPane(box);
-        root.setAlignment(Pos.CENTER);
-        root.setStyle("-fx-background-color: #f8f8f8;");
+        // scrolls on small windows so long forms (registration) never get cut off
+        StackPane center = new StackPane(box);
+        center.setAlignment(Pos.CENTER);
+        center.setPadding(new Insets(24));
+        ScrollPane scroll = new ScrollPane(center);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
+
+        StackPane root = new StackPane(scroll);
+        root.getStyleClass().add("auth-bg");
         return root;
     }
 }

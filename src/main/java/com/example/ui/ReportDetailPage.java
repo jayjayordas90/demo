@@ -6,15 +6,14 @@ import com.example.model.User;
 import com.example.service.ReportService;
 import com.example.service.Session;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 
 import java.util.List;
 
@@ -34,121 +33,55 @@ public class ReportDetailPage extends DashboardPage {
         return value == null || value.isBlank() ? "Not provided" : value;
     }
 
+    private static VBox card(Node... children) {
+        VBox box = new VBox(12, children);
+        box.setPadding(new Insets(22));
+        box.setMaxWidth(720);
+        box.getStyleClass().add("card");
+        return box;
+    }
+
+    private HBox detail(String label, String value) {
+        Label name = new Label(label);
+        name.getStyleClass().add("field-label");
+        name.setMinWidth(130);
+        Label text = new Label(value);
+        text.setWrapText(true);
+        HBox row = new HBox(10, name, text);
+        row.setAlignment(Pos.TOP_LEFT);
+        return row;
+    }
+
     @Override
     protected Node buildContent() {
         User actor = Session.getCurrentUser();
 
-        VBox content = new VBox(16);
-        content.setPadding(new Insets(30));
-        content.setMaxWidth(650);
+        VBox content = new VBox(18);
+        content.setPadding(new Insets(32));
 
-        Button back = new Button("← Back to All Reports");
-        back.setStyle("-fx-background-color: transparent; -fx-text-fill: gray;");
+        Button back = UI.flat("Back to All Reports", "back", false);
         back.setOnAction(e -> nav.showAllReports());
 
-        content.getChildren().addAll(back,
-                UI.heading(report.getReferenceNo(), 26),
-                UI.panel("Type:  " + report.getType()
-                        + "\nLocation:  " + orNotProvided(report.getLocation())
-                        + "\nIncident date:  " + report.getIncidentDateFormatted()
-                        + (report.getIncidentTime() == null || report.getIncidentTime().isBlank() ? ""
-                                : "  at  " + report.getIncidentTime())
-                        + "\nPeople involved:  " + orNotProvided(report.getPeopleInvolved())
-                        + "\nSubmitted:  " + report.getDateSubmittedFormatted()
-                        + "\nStatus:  " + report.getStatus().getLabel()),
-                UI.heading("Description", 15),
-                UI.muted(report.getDescription()));
+        HBox title = new HBox(14, UI.heading(report.getReferenceNo(), 28), UI.statusBadge(report.getStatus()));
+        title.setAlignment(Pos.CENTER_LEFT);
 
-        // ---- emoji replies ----
-        content.getChildren().add(UI.heading("Reply to this report", 15));
-        content.getChildren().add(UI.muted(
-                "Send a caring emoji. The student sees it in My Reports as coming from \"a staff member\"."));
-        Label replyMsg = UI.errorLabel();
-        HBox reactions = new HBox(8);
-        for (Reaction reaction : Reaction.values()) {
-            Button button = new Button(reaction.getSymbol());
-            button.setFont(Font.font(24));
-            button.setTooltip(new Tooltip(reaction.getMeaning()));
-            button.setStyle("-fx-background-color: white; -fx-border-color: #cccccc; -fx-border-radius: 6;"
-                    + "-fx-background-radius: 6; -fx-cursor: hand;");
-            button.setOnAction(e -> {
-                try {
-                    ReportService.reply(actor, report, reaction);
-                    nav.showReportDetail(report);   // refresh
-                } catch (IllegalArgumentException ex) {
-                    UI.showMessage(replyMsg, ex.getMessage(), true);
-                }
-            });
-            reactions.getChildren().add(button);
-        }
-        content.getChildren().addAll(reactions, replyMsg);
+        String when = report.getIncidentDateFormatted()
+                + (report.getIncidentTime() == null || report.getIncidentTime().isBlank() ? ""
+                        : " at " + report.getIncidentTime());
+        VBox details = card(
+                UI.heading("Details", 17),
+                detail("Type", report.getType()),
+                detail("Location", orNotProvided(report.getLocation())),
+                detail("When", when),
+                detail("People involved", orNotProvided(report.getPeopleInvolved())),
+                detail("Submitted", report.getDateSubmittedFormatted()),
+                UI.heading("What happened", 15),
+                UI.panel(report.getDescription()));
 
-        List<Report.Reply> replies = report.getReplies();
-        if (!replies.isEmpty()) {
-            VBox sent = new VBox(4);
-            for (Report.Reply reply : replies) {
-                sent.getChildren().add(UI.muted(reply.getReaction().getSymbol() + "   "
-                        + reply.getStaffName() + " · " + reply.getSentFormatted()));
-            }
-            content.getChildren().add(sent);
-        }
+        content.getChildren().addAll(back, title, details, replySection(actor), statusSection(actor), notesSection(actor));
 
-        // ---- status control ----
-        List<Report.Status> allowed = actor.getRole().allowedStatuses();
-        ComboBox<Report.Status> statusBox = new ComboBox<>();
-        statusBox.getItems().addAll(allowed);
-        statusBox.setValue(allowed.contains(report.getStatus()) ? report.getStatus() : null);
-        statusBox.setPromptText(report.getStatus().getLabel());
-        statusBox.setDisable(allowed.isEmpty());
-        Button updateStatus = UI.button("Update Status", true);
-        updateStatus.setPrefWidth(180);
-        Label statusMsg = UI.errorLabel();
-        updateStatus.setOnAction(e -> {
-            if (statusBox.getValue() == null) {
-                UI.showMessage(statusMsg, "Choose a status first.", true);
-                return;
-            }
-            try {
-                ReportService.updateStatus(actor, report, statusBox.getValue());
-                nav.showReportDetail(report);   // refresh
-            } catch (IllegalArgumentException ex) {
-                UI.showMessage(statusMsg, ex.getMessage(), true);
-            }
-        });
-        HBox statusRow = new HBox(10, new Label("Set status:"), statusBox, updateStatus);
-        statusRow.setStyle("-fx-alignment: center-left;");
-        content.getChildren().addAll(UI.heading("Status", 15), statusRow, statusMsg);
-
-        // ---- internal notes ----
-        content.getChildren().add(UI.heading("Staff notes", 15));
-        if (report.getNotes().isEmpty()) {
-            content.getChildren().add(UI.muted("No notes yet."));
-        } else {
-            for (String note : report.getNotes()) {
-                content.getChildren().add(UI.muted(note));
-            }
-        }
-        TextArea noteText = new TextArea();
-        noteText.setPromptText("Add an internal note (staff only, never shown to the reporter)...");
-        noteText.setPrefRowCount(2);
-        noteText.setWrapText(true);
-        Button addNote = UI.button("Add Note", false);
-        addNote.setPrefWidth(140);
-        Label noteMsg = UI.errorLabel();
-        addNote.setOnAction(e -> {
-            try {
-                ReportService.addNote(actor, report, noteText.getText());
-                nav.showReportDetail(report);   // refresh
-            } catch (IllegalArgumentException ex) {
-                UI.showMessage(noteMsg, ex.getMessage(), true);
-            }
-        });
-        content.getChildren().addAll(noteText, addNote, noteMsg);
-
-        // ---- delete (administrator only) ----
         if (actor.getRole().canDeleteReports()) {
-            Button delete = new Button("🗑  Delete Report");
-            delete.setStyle("-fx-background-color: transparent; -fx-text-fill: crimson;");
+            Button delete = UI.flat("Delete this report", "delete", true);
             delete.setOnAction(e -> {
                 ReportService.delete(actor, report);
                 nav.showAllReports();
@@ -156,5 +89,104 @@ public class ReportDetailPage extends DashboardPage {
             content.getChildren().add(delete);
         }
         return content;
+    }
+
+    // ---------- emoji replies ----------
+    private VBox replySection(User actor) {
+        VBox sent = new VBox(8);
+        fillReplies(sent);
+        Label message = UI.errorLabel();
+
+        HBox buttons = new HBox(10);
+        buttons.setAlignment(Pos.CENTER_LEFT);
+        for (Reaction reaction : Reaction.values()) {
+            Button button = UI.emojiButton(reaction, 40);
+            button.setOnAction(e -> {
+                try {
+                    ReportService.reply(actor, report, reaction);
+                    UI.bounce(button);
+                    fillReplies(sent);
+                    UI.showMessage(message, "Sent: \"" + reaction.getMeaning() + "\"", false);
+                } catch (IllegalArgumentException ex) {
+                    UI.showMessage(message, ex.getMessage(), true);
+                }
+            });
+            buttons.getChildren().add(button);
+        }
+
+        return card(UI.heading("Reply with an emoji", 17),
+                UI.muted("Send a caring reply. The student sees it in My Reports as coming from \"a staff member\"."),
+                buttons, message, sent);
+    }
+
+    private void fillReplies(VBox list) {
+        list.getChildren().clear();
+        List<Report.Reply> replies = report.getReplies();
+        if (replies.isEmpty()) {
+            list.getChildren().add(UI.muted("No replies sent yet."));
+            return;
+        }
+        for (Report.Reply reply : replies) {
+            HBox row = new HBox(12, Emoji.of(reply.getReaction(), 30),
+                    UI.muted(reply.getStaffName() + " · " + reply.getSentFormatted()));
+            row.setAlignment(Pos.CENTER_LEFT);
+            list.getChildren().add(row);
+        }
+    }
+
+    // ---------- status ----------
+    private VBox statusSection(User actor) {
+        List<Report.Status> allowed = actor.getRole().allowedStatuses();
+        ComboBox<Report.Status> statusBox = new ComboBox<>();
+        statusBox.getItems().addAll(allowed);
+        statusBox.setValue(allowed.contains(report.getStatus()) ? report.getStatus() : null);
+        statusBox.setPromptText(report.getStatus().getLabel());
+        statusBox.setDisable(allowed.isEmpty());
+
+        Button update = UI.button("Update Status", "check", true);
+        update.setPrefWidth(190);
+        Label message = UI.errorLabel();
+        update.setOnAction(e -> {
+            if (statusBox.getValue() == null) {
+                UI.showMessage(message, "Choose a status first.", true);
+                return;
+            }
+            try {
+                ReportService.updateStatus(actor, report, statusBox.getValue());
+                nav.showReportDetail(report);   // refresh
+            } catch (IllegalArgumentException ex) {
+                UI.showMessage(message, ex.getMessage(), true);
+            }
+        });
+        HBox row = new HBox(12, statusBox, update);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return card(UI.heading("Status", 17), row, message);
+    }
+
+    // ---------- internal notes ----------
+    private VBox notesSection(User actor) {
+        VBox notes = new VBox(8);
+        if (report.getNotes().isEmpty()) {
+            notes.getChildren().add(UI.muted("No notes yet."));
+        }
+        for (String note : report.getNotes()) {
+            notes.getChildren().add(UI.panel(note));
+        }
+        TextArea noteText = new TextArea();
+        noteText.setPromptText("Add an internal note (staff only, never shown to the reporter)...");
+        noteText.setPrefRowCount(2);
+        noteText.setWrapText(true);
+        Button add = UI.button("Add Note", "add", false);
+        add.setPrefWidth(160);
+        Label message = UI.errorLabel();
+        add.setOnAction(e -> {
+            try {
+                ReportService.addNote(actor, report, noteText.getText());
+                nav.showReportDetail(report);   // refresh
+            } catch (IllegalArgumentException ex) {
+                UI.showMessage(message, ex.getMessage(), true);
+            }
+        });
+        return card(UI.heading("Staff notes", 17), notes, noteText, add, message);
     }
 }

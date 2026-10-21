@@ -23,9 +23,8 @@ public class SettingsPage extends DashboardPage {
     protected Node buildContent() {
         User user = Session.getCurrentUser();
 
-        VBox content = new VBox(14);
-        content.setPadding(new Insets(35));
-        content.setMaxWidth(500);
+        VBox content = new VBox(18);
+        content.setPadding(new Insets(32));
         content.getChildren().add(UI.heading("Settings", 28));
 
         if (user.isAnonymous()) {
@@ -37,7 +36,7 @@ public class SettingsPage extends DashboardPage {
         TextField fullName = new TextField(user.getFullName());
         TextField email = new TextField(user.getEmail());
         Label profileMsg = UI.errorLabel();
-        Button save = UI.button("Save Changes", true);
+        Button save = UI.button("Save Changes", "check", true);
         save.setOnAction(e -> {
             try {
                 user.setFullName(fullName.getText());
@@ -54,7 +53,7 @@ public class SettingsPage extends DashboardPage {
         PasswordField newPass = new PasswordField();
         PasswordField confirm = new PasswordField();
         Label passMsg = UI.errorLabel();
-        Button change = UI.button("Change Password", false);
+        Button change = UI.button("Change Password", "lock", false);
         change.setOnAction(e -> {
             try {
                 if (!newPass.getText().equals(confirm.getText())) {
@@ -72,11 +71,19 @@ public class SettingsPage extends DashboardPage {
         });
 
         content.getChildren().addAll(
-                UI.heading("Edit profile", 18),
-                UI.labeled("Full name", fullName), UI.labeled("Email", email), profileMsg, save,
-                UI.heading("Change password", 18),
-                UI.labeled("Current password", current), UI.labeled("New password", newPass),
-                UI.labeled("Confirm new password", confirm), passMsg, change);
+                section("Edit profile", UI.labeled("Full name", fullName), UI.labeled("Email", email), profileMsg, save),
+                section("Change password", UI.labeled("Current password", current),
+                        UI.labeled("New password", newPass), UI.labeled("Confirm new password", confirm),
+                        passMsg, change));
         return content;
+    }
+
+    private VBox section(String title, Node... children) {
+        VBox card = new VBox(12, UI.heading(title, 18));
+        card.getChildren().addAll(children);
+        card.setPadding(new Insets(24));
+        card.setMaxWidth(520);
+        card.getStyleClass().add("card");
+        return card;
     }
 }

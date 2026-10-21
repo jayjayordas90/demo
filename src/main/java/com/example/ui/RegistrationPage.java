@@ -55,8 +55,7 @@ public class RegistrationPage extends AuthPage {
         create.setOnAction(e -> attemptRegister());
         confirm.setOnAction(e -> attemptRegister());
 
-        Button login = new Button("Already have an account? Login");
-        login.setStyle("-fx-background-color: transparent; -fx-underline: true;");
+        Button login = UI.flat("Already have an account? Login", null, false);
         login.setOnAction(e -> nav.showLogin());
 
         return new VBox(10,
@@ -77,6 +76,7 @@ public class RegistrationPage extends AuthPage {
                 alert.setHeaderText("Waiting for approval");
                 alert.setContentText("Your registration will be approved by an admin. "
                         + "Please try logging in later.");
+                Theme.apply(alert.getDialogPane());
                 alert.showAndWait();
                 nav.showLogin();
             } else {

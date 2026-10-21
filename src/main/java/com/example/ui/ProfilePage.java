@@ -7,15 +7,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 
 public class ProfilePage extends DashboardPage {
 
@@ -30,12 +24,12 @@ public class ProfilePage extends DashboardPage {
         User user = Session.getCurrentUser();
 
         VBox content = new VBox(20);
-        content.setPadding(new Insets(35));
+        content.setPadding(new Insets(32));
         content.getChildren().add(UI.heading("My Profile", 28));
 
         if (user.isAnonymous()) {
-            Button login = UI.button("Login", true);
-            Button register = UI.button("Create Account", false);
+            Button login = UI.button("Login", "person", true);
+            Button register = UI.button("Create Account", "add", false);
             login.setOnAction(e -> nav.showLogin());
             register.setOnAction(e -> nav.showRegister());
             content.getChildren().addAll(
@@ -44,28 +38,40 @@ public class ProfilePage extends DashboardPage {
             return content;
         }
 
-        // Avatar: a circle with the user's first initial
-        Label initial = new Label(user.getFullName().substring(0, 1).toUpperCase());
-        initial.setFont(Font.font(UI.FONT, FontWeight.BOLD, 32));
-        initial.setTextFill(Color.WHITE);
-        StackPane avatar = new StackPane(new Circle(38, Color.web("#222222")), initial);
-
-        VBox names = new VBox(4, UI.heading(user.getFullName(), 22), UI.muted("@" + user.getUsername()));
+        VBox names = new VBox(6, UI.heading(user.getFullName(), 24), UI.muted("@" + user.getUsername()),
+                UI.roleBadge(user.getRole()));
         names.setAlignment(Pos.CENTER_LEFT);
-        HBox header = new HBox(20, avatar, names);
+        HBox header = new HBox(20, UI.avatar(user.getFullName(), 38), names);
         header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(24));
+        header.setMaxWidth(720);
+        header.getStyleClass().add("card");
 
-        FlowPane stats = new FlowPane(15, 15,
-                UI.stat(String.valueOf(ReportService.countFor(user)), "Reports submitted"),
-                UI.stat(user.getMemberSinceFormatted(), "Member since"));
+        VBox details = new VBox(14,
+                infoRow("reports", "Email", user.getEmail()),
+                infoRow("person", "Username", user.getUsername()),
+                infoRow("shield", "Role", user.getRole().getLabel()),
+                infoRow("history", "Member since", user.getMemberSinceFormatted()));
+        details.setPadding(new Insets(22));
+        details.setMaxWidth(720);
+        details.getStyleClass().add("card");
 
-        Button edit = UI.button("✎  Edit Profile / Change Password", true);
+        content.getChildren().addAll(header, details);
+        if (!user.isStaff()) {
+            content.getChildren().add(new FlowPane(16, 16,
+                    UI.stat(String.valueOf(ReportService.countFor(user)), "Reports submitted")));
+        }
+
+        Button edit = UI.button("Edit Profile / Change Password", "edit", true);
         edit.setOnAction(e -> nav.showSettings());
-
-        content.getChildren().addAll(header,
-                UI.panel("Email:  " + user.getEmail() + "\nUsername:  " + user.getUsername()
-                        + "\nRole:  " + user.getRole() + "\nAccount ID:  " + user.getId()),
-                stats, edit);
+        content.getChildren().add(edit);
         return content;
+    }
+
+    private HBox infoRow(String icon, String label, String value) {
+        HBox row = new HBox(14, UI.iconBadge(icon, "teal", 40),
+                new VBox(1, UI.muted(label), UI.heading(value, 14)));
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
     }
 }

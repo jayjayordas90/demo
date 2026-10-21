@@ -3,6 +3,7 @@ package com.example.ui;
 import com.example.model.Report;
 import com.example.service.Session;
 import com.example.service.UserService;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
@@ -16,12 +17,17 @@ public class Navigator {
     public Navigator(Stage stage) {
         this.stage = stage;
         this.scene = new Scene(new StackPane(), 1000, 650);
+        Theme.apply(scene);
         stage.setTitle("PaperKite");
+        stage.setMinWidth(920);
+        stage.setMinHeight(620);
         stage.setScene(scene);
     }
 
     private void show(Page page) {
-        scene.setRoot(page.build());
+        Parent root = page.build();
+        UI.fadeIn(root);          // soft fade/slide between pages
+        scene.setRoot(root);
         stage.show();
     }
 

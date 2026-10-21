@@ -6,7 +6,9 @@ import com.example.model.User;
 import com.example.service.Session;
 import com.example.service.UserService;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -36,10 +38,10 @@ public class UserManagementPage extends DashboardPage {
     @Override
     protected Node buildContent() {
         VBox content = new VBox(16);
-        content.setPadding(new Insets(30));
+        content.setPadding(new Insets(32));
 
-        Button add = UI.button("➕  Add Teacher / Student Account", true);
-        add.setPrefWidth(300);
+        Button add = UI.button("Add Teacher / Student Account", "add", true);
+        add.setPrefWidth(320);
         add.setOnAction(e -> openCreateDialog());
 
         content.getChildren().addAll(
@@ -73,7 +75,7 @@ public class UserManagementPage extends DashboardPage {
     }
 
     private void addSection(String title, List<User> users, String emptyText) {
-        sections.getChildren().add(UI.heading(title, 18));
+        sections.getChildren().add(UI.heading(title, 19));
         if (users.isEmpty()) {
             sections.getChildren().add(UI.muted(emptyText));
         }
@@ -85,27 +87,30 @@ public class UserManagementPage extends DashboardPage {
     private HBox userRow(User user) {
         User admin = Session.getCurrentUser();
 
-        String state = user.getApproval() != ApprovalStatus.APPROVED
-                ? user.getApproval().getLabel()
-                : (user.isActive() ? "Active" : "Deactivated");
-        VBox info = new VBox(2,
-                UI.heading(user.getFullName(), 14),
-                UI.muted("@" + user.getUsername() + " · " + user.getEmail() + " · " + state));
+        HBox top = new HBox(10, UI.heading(user.getFullName(), 15), UI.roleBadge(user.getRole()));
+        top.setAlignment(Pos.CENTER_LEFT);
+        if (user.getApproval() != ApprovalStatus.APPROVED) {
+            top.getChildren().add(UI.badge(user.getApproval().getLabel(), "badge-pending"));
+        } else if (!user.isActive()) {
+            top.getChildren().add(UI.badge("Deactivated", "badge-off"));
+        }
+        VBox info = new VBox(3, top, UI.muted("@" + user.getUsername() + " · " + user.getEmail()));
         HBox.setHgrow(info, Priority.ALWAYS);
 
-        HBox row = new HBox(10, info);
-        row.setPadding(new Insets(12));
-        row.setStyle(UI.CARD_STYLE + "-fx-alignment: center-left;");
+        HBox row = new HBox(12, UI.avatar(user.getFullName(), 22), info);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(14, 18, 14, 18));
+        row.setMaxWidth(900);
+        row.getStyleClass().add("card");
 
         if (user.getApproval() != ApprovalStatus.APPROVED) {
             // ---- registration waiting for a decision ----
-            Button approve = UI.button("Approve", true);
-            approve.setPrefSize(100, 34);
+            Button approve = UI.button("Approve", "check", true);
+            approve.setPrefSize(130, 36);
             approve.setOnAction(e -> run(() -> UserService.approve(admin, user)));
             row.getChildren().add(approve);
             if (user.getApproval() == ApprovalStatus.PENDING) {
-                Button reject = UI.button("Reject", false);
-                reject.setPrefSize(100, 34);
+                Button reject = UI.flat("Reject", "close", true);
                 reject.setOnAction(e -> run(() -> UserService.reject(admin, user)));
                 row.getChildren().add(reject);
             }
@@ -114,25 +119,23 @@ public class UserManagementPage extends DashboardPage {
             ComboBox<Role> roleBox = new ComboBox<>();
             roleBox.getItems().addAll(Role.STUDENT, Role.TEACHER);
             roleBox.setValue(user.getRole());
+            roleBox.setPrefWidth(120);
             roleBox.setOnAction(e -> {
                 if (roleBox.getValue() != user.getRole()) {
                     run(() -> UserService.changeRole(admin, user, roleBox.getValue()));
                 }
             });
 
-            Button toggle = UI.button(user.isActive() ? "Deactivate" : "Activate", false);
-            toggle.setPrefSize(110, 34);
+            Button toggle = UI.flat(user.isActive() ? "Deactivate" : "Activate", user.isActive() ? "close" : "check", false);
             toggle.setOnAction(e -> run(() -> UserService.setActive(admin, user, !user.isActive())));
 
-            Button reset = UI.button("Reset Password", false);
-            reset.setPrefSize(140, 34);
+            Button reset = UI.flat("Reset password", "lock", false);
             reset.setOnAction(e -> openResetDialog(user));
 
             row.getChildren().addAll(roleBox, toggle, reset);
         }
 
-        Button delete = new Button("🗑");
-        delete.setStyle("-fx-background-color: transparent; -fx-text-fill: crimson;");
+        Button delete = UI.flat("", "delete", true);
         delete.setOnAction(e -> run(() -> UserService.delete(admin, user)));
         row.getChildren().add(delete);
         return row;
@@ -147,6 +150,17 @@ public class UserManagementPage extends DashboardPage {
             UI.showMessage(error, ex.getMessage(), true);
         }
         refresh();
+    }
+
+    private void showDialog(Stage dialog, VBox box, double width, double height, String title) {
+        box.setPadding(new Insets(26));
+        box.getStyleClass().add("page-bg");
+        Scene scene = new Scene(box, width, height);
+        Theme.apply(scene);
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setScene(scene);
+        dialog.setTitle(title);
+        dialog.showAndWait();
     }
 
     private void openCreateDialog() {
@@ -164,7 +178,8 @@ public class UserManagementPage extends DashboardPage {
         Label dialogError = UI.errorLabel();
 
         Stage dialog = new Stage();
-        Button create = UI.button("Create Account", true);
+        Button create = UI.button("Create Account", "add", true);
+        create.setMaxWidth(Double.MAX_VALUE);
         create.setOnAction(e -> {
             try {
                 UserService.create(Session.getCurrentUser(), fullName.getText(), username.getText(),
@@ -177,16 +192,11 @@ public class UserManagementPage extends DashboardPage {
         });
 
         VBox box = new VBox(10,
-                UI.heading("New Account", 18),
+                UI.heading("New Account", 22),
                 UI.labeled("Full name", fullName), UI.labeled("Username", username),
                 UI.labeled("Email", email), UI.labeled("Temporary password", password),
                 UI.labeled("Role", role), dialogError, create);
-        box.setPadding(new Insets(25));
-
-        dialog.initModality(Modality.APPLICATION_MODAL);
-        dialog.setScene(new javafx.scene.Scene(box, 360, 440));
-        dialog.setTitle("Add Account");
-        dialog.showAndWait();
+        showDialog(dialog, box, 380, 560, "Add Account");
     }
 
     private void openResetDialog(User target) {
@@ -195,7 +205,8 @@ public class UserManagementPage extends DashboardPage {
         Label dialogError = UI.errorLabel();
 
         Stage dialog = new Stage();
-        Button confirm = UI.button("Reset Password", true);
+        Button confirm = UI.button("Reset Password", "lock", true);
+        confirm.setMaxWidth(Double.MAX_VALUE);
         confirm.setOnAction(e -> {
             try {
                 UserService.resetPassword(Session.getCurrentUser(), target, newPassword.getText());
@@ -205,14 +216,9 @@ public class UserManagementPage extends DashboardPage {
             }
         });
 
-        VBox box = new VBox(10,
-                UI.heading("Reset password for @" + target.getUsername(), 16),
+        VBox box = new VBox(12,
+                UI.heading("Reset password for @" + target.getUsername(), 18),
                 UI.labeled("New password", newPassword), dialogError, confirm);
-        box.setPadding(new Insets(25));
-
-        dialog.initModality(Modality.APPLICATION_MODAL);
-        dialog.setScene(new javafx.scene.Scene(box, 340, 220));
-        dialog.setTitle("Reset Password");
-        dialog.showAndWait();
+        showDialog(dialog, box, 360, 260, "Reset Password");
     }
 }

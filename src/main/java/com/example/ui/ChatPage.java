@@ -12,14 +12,21 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextFlow;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** Group chat for teachers and administrators ONLY (Navigator and ChatService both enforce this). */
 public class ChatPage extends DashboardPage {
 
-    private final VBox messageList = new VBox(8);
+    private final VBox messageList = new VBox(10);
+    private final HBox pickedBox = new HBox(6);
+    private final List<Reaction> picked = new ArrayList<>();
 
     public ChatPage(Navigator nav) {
         super(nav);
@@ -31,33 +38,44 @@ public class ChatPage extends DashboardPage {
     protected Node buildContent() {
         User me = Session.getCurrentUser();
 
-        VBox content = new VBox(12);
-        content.setPadding(new Insets(30));
-        content.getChildren().addAll(
-                UI.heading("Staff Chat", 28),
+        VBox content = new VBox(14);
+        content.setPadding(new Insets(32));
+
+        HBox title = new HBox(12, UI.heading("Staff Chat", 28), UI.badge("Staff only", "badge-teacher"));
+        title.setAlignment(Pos.CENTER_LEFT);
+        content.getChildren().addAll(title,
                 UI.muted("A private room for teachers and administrators. Students cannot see it."));
 
-        messageList.setPadding(new Insets(12));
+        messageList.setPadding(new Insets(16));
         ScrollPane scroll = new ScrollPane(messageList);
         scroll.setFitToWidth(true);
         scroll.setPrefHeight(380);
-        scroll.setStyle("-fx-background-color: white; -fx-border-color: #dddddd;");
+        scroll.getStyleClass().add("chat-box");
         // keep the newest message in view whenever the list grows
         messageList.heightProperty().addListener((obs, oldValue, newValue) -> scroll.setVvalue(1.0));
         refreshMessages(me);
 
         TextField input = new TextField();
         input.setPromptText("Type a message...");
-        input.setPrefHeight(38);
+        input.setPrefHeight(42);
         HBox.setHgrow(input, Priority.ALWAYS);
-        Button send = UI.button("Send", true);
-        send.setPrefWidth(90);
+        Button send = UI.button("Send", "send", true);
+        send.setPrefWidth(110);
         Label error = UI.errorLabel();
 
         Runnable sendMessage = () -> {
             try {
-                ChatService.post(me, input.getText());
+                StringBuilder full = new StringBuilder(input.getText().trim());
+                if (full.length() > 0 && !picked.isEmpty()) {
+                    full.append(' ');
+                }
+                for (Reaction reaction : picked) {
+                    full.append(reaction.getSymbol());
+                }
+                ChatService.post(me, full.toString());
                 input.clear();
+                picked.clear();
+                redrawPicked();
                 UI.hide(error);
                 refreshMessages(me);
             } catch (IllegalArgumentException ex) {
@@ -67,26 +85,46 @@ public class ChatPage extends DashboardPage {
         send.setOnAction(e -> sendMessage.run());
         input.setOnAction(e -> sendMessage.run());   // Enter sends
 
-        // quick emoji buttons
-        HBox emojis = new HBox(6);
+        // quick emoji buttons: drawn emoji, added to the message you are writing
+        HBox emojis = new HBox(8);
+        emojis.setAlignment(Pos.CENTER_LEFT);
         for (Reaction reaction : Reaction.values()) {
-            Button emoji = new Button(reaction.getSymbol());
-            emoji.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+            Button emoji = UI.emojiButton(reaction, 26);
             emoji.setOnAction(e -> {
-                input.appendText(reaction.getSymbol());
-                input.requestFocus();
-                input.end();
+                picked.add(reaction);
+                redrawPicked();
+                UI.bounce(emoji);
             });
             emojis.getChildren().add(emoji);
         }
+        pickedBox.setAlignment(Pos.CENTER_LEFT);
+        redrawPicked();
 
-        content.getChildren().addAll(scroll, emojis, new HBox(10, input, send), error);
+        content.getChildren().addAll(scroll, emojis, pickedBox, new HBox(10, input, send), error);
         return content;
+    }
+
+    /** Shows the emoji chosen for the next message (click one to remove it). */
+    private void redrawPicked() {
+        pickedBox.getChildren().clear();
+        pickedBox.setVisible(!picked.isEmpty());
+        pickedBox.setManaged(!picked.isEmpty());
+        for (Reaction reaction : new ArrayList<>(picked)) {
+            Button chip = new Button();
+            chip.setGraphic(Emoji.of(reaction, 24));
+            chip.getStyleClass().add("btn-ghost");
+            chip.setTooltip(new Tooltip("Click to remove"));
+            chip.setOnAction(e -> {
+                picked.remove(reaction);
+                redrawPicked();
+            });
+            pickedBox.getChildren().add(chip);
+        }
     }
 
     private void refreshMessages(User me) {
         messageList.getChildren().clear();
-        var messages = ChatService.getAll(me);
+        List<ChatMessage> messages = ChatService.getAll(me);
         if (messages.isEmpty()) {
             messageList.getChildren().add(UI.muted("No messages yet. Say hello to your colleagues!"));
             return;
@@ -99,15 +137,14 @@ public class ChatPage extends DashboardPage {
     private HBox bubble(ChatMessage message, boolean mine) {
         Label header = UI.muted(message.getSenderName() + " (" + message.getSenderRole() + ") · "
                 + message.getSentFormatted());
-        header.setStyle("-fx-font-size: 11;");
+        header.setStyle("-fx-font-size: 11px;");
 
-        Label text = new Label(message.getText());
-        text.setWrapText(true);
-        text.setMaxWidth(380);
-        text.setPadding(new Insets(8, 12, 8, 12));
-        text.setStyle(mine
-                ? "-fx-background-color: #222222; -fx-text-fill: white; -fx-background-radius: 12;"
-                : "-fx-background-color: #eeeeee; -fx-background-radius: 12;");
+        // the six reaction emoji inside the text are drawn as vector art, not font characters
+        TextFlow text = Emoji.flow(message.getText(), 22, mine
+                ? "-fx-fill: white; -fx-font-size: 14px;"
+                : "-fx-fill: #000000; -fx-font-size: 14px;");
+        text.getStyleClass().add(mine ? "bubble-mine" : "bubble-other");
+        text.setMaxWidth(400);
 
         VBox box = new VBox(3, header, text);
         box.setAlignment(mine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);

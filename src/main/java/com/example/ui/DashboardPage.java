@@ -21,11 +21,11 @@ public abstract class DashboardPage extends Page {
     @Override
     public final Parent build() {
         BorderPane layout = new BorderPane();
+        layout.getStyleClass().add("page-bg");
         layout.setLeft(new Sidebar(nav, navKey()).build());
 
         ScrollPane scroll = new ScrollPane(buildContent());
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: transparent;");
         layout.setCenter(scroll);
         return layout;
     }
