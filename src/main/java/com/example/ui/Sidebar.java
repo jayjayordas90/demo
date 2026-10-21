@@ -33,24 +33,46 @@ public class Sidebar {
         logo.setAlignment(Pos.CENTER);
         logo.setMaxWidth(Double.MAX_VALUE);
 
-        Label who = UI.muted(user.isAnonymous() ? "Guest (anonymous)" : "@" + user.getUsername());
+        Label who = UI.muted(user.isAnonymous() ? "Guest (anonymous)"
+                : "@" + user.getUsername() + (user.isStaff() ? " · " + user.getRole() : ""));
         who.setAlignment(Pos.CENTER);
         who.setMaxWidth(Double.MAX_VALUE);
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        sidebar.getChildren().addAll(
-                logo, who,
-                item("⌂  Home", "home", nav::showHome),
-                item("▣  My Reports", "reports", nav::showMyReports),
-                item("👤  Profile", "profile", nav::showProfile),
-                item("♡  Safety & Support", "safety", nav::showSafety),
-                item("ⓘ  About", "about", nav::showAbout),
-                spacer,
-                item("⚙  Settings", "settings", nav::showSettings),
-                item(user.isAnonymous() ? "↩  Back to Start" : "↪  Log out", "logout", nav::logout),
-                item("✕  Exit", "exit", nav::exit));
+        sidebar.getChildren().addAll(logo, who);
+
+        if (user.getRole().canMonitorReports()) {
+            // ---- teacher / administrator menu ----
+            sidebar.getChildren().addAll(
+                    item("⌂  Dashboard", "home", nav::showHome),
+                    item("▣  All Reports", "reports", nav::showAllReports),
+                    item("💬  Staff Chat", "chat", nav::showStaffChat));
+            if (user.getRole().canManageUsers()) {
+                sidebar.getChildren().addAll(
+                        item("⚐  Manage Users", "users", nav::showUserManagement),
+                        item("≡  Activity Log", "activity", nav::showActivityLog));
+            }
+            sidebar.getChildren().addAll(
+                    item("👤  Profile", "profile", nav::showProfile),
+                    spacer,
+                    item("⚙  Settings", "settings", nav::showSettings),
+                    item("↪  Log out", "logout", nav::logout),
+                    item("✕  Exit", "exit", nav::exit));
+        } else {
+            // ---- student / guest menu ----
+            sidebar.getChildren().addAll(
+                    item("⌂  Home", "home", nav::showHome),
+                    item("▣  My Reports", "reports", nav::showMyReports),
+                    item("👤  Profile", "profile", nav::showProfile),
+                    item("♡  Safety & Support", "safety", nav::showSafety),
+                    item("ⓘ  About", "about", nav::showAbout),
+                    spacer,
+                    item("⚙  Settings", "settings", nav::showSettings),
+                    item(user.isAnonymous() ? "↩  Back to Start" : "↪  Log out", "logout", nav::logout),
+                    item("✕  Exit", "exit", nav::exit));
+        }
         return sidebar;
     }
 

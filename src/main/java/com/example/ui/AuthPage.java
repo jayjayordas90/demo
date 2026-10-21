@@ -5,10 +5,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-/** Shared look for the Login and Registration pages. */
+/** Shared look for the Login, Registration and Admin-setup pages. */
 public abstract class AuthPage extends Page {
 
     protected AuthPage(Navigator nav) {
@@ -21,16 +22,23 @@ public abstract class AuthPage extends Page {
 
     protected abstract Node form();
 
+    /** Subclasses (e.g. first-run admin setup) can hide the Back button. */
+    protected boolean showBackButton() {
+        return true;
+    }
+
     @Override
     public final Parent build() {
-        Button back = new Button("← Back");
-        back.setStyle("-fx-background-color: transparent; -fx-text-fill: gray;");
-        back.setOnAction(e -> nav.showWelcome());
-
-        VBox box = new VBox(14, UI.heading(title(), 26), UI.muted(subtitle()), form(), back);
+        VBox box = new VBox(14, UI.heading(title(), 26), UI.muted(subtitle()), form());
+        if (showBackButton()) {
+            Button back = new Button("← Back");
+            back.setStyle("-fx-background-color: transparent; -fx-text-fill: gray;");
+            back.setOnAction(e -> nav.showWelcome());
+            box.getChildren().add(back);
+        }
         box.setPadding(new Insets(30));
         box.setMaxWidth(400);
-        box.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        box.setMaxHeight(Region.USE_PREF_SIZE);
         box.setStyle(UI.CARD_STYLE);
 
         StackPane root = new StackPane(box);
@@ -38,5 +46,4 @@ public abstract class AuthPage extends Page {
         root.setStyle("-fx-background-color: #f8f8f8;");
         return root;
     }
-
 }

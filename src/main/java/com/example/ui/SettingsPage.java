@@ -1,6 +1,7 @@
 package com.example.ui;
 
 import com.example.model.User;
+import com.example.service.DataStore;
 import com.example.service.Session;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -41,6 +42,7 @@ public class SettingsPage extends DashboardPage {
             try {
                 user.setFullName(fullName.getText());
                 user.setEmail(email.getText());
+                DataStore.save();
                 UI.showMessage(profileMsg, "Profile updated.", false);
             } catch (IllegalArgumentException ex) {
                 UI.showMessage(profileMsg, ex.getMessage(), true);
@@ -59,6 +61,7 @@ public class SettingsPage extends DashboardPage {
                     throw new IllegalArgumentException("New passwords do not match.");
                 }
                 user.changePassword(current.getText(), newPass.getText());
+                DataStore.save();
                 current.clear();
                 newPass.clear();
                 confirm.clear();

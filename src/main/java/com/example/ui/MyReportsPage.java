@@ -33,21 +33,49 @@ public class MyReportsPage extends DashboardPage {
         if (user.isAnonymous()) {
             content.getChildren().add(UI.panel(
                     "Anonymous guests cannot track reports. Log in or create an account to see "
-                    + "the status of the reports you submit. Keep your reference number safe!"));
+                    + "the status of the reports you submit and any replies from staff."));
             return content;
         }
 
         TableView<Report> table = new TableView<>();
-        table.getColumns().add(column("Reference No.", 150, Report::getReferenceNo));
-        table.getColumns().add(column("Type", 120, Report::getType));
-        table.getColumns().add(column("Date Submitted", 150, Report::getDateSubmittedFormatted));
-        table.getColumns().add(column("Status", 120, r -> r.getStatus().getLabel()));
+        table.getColumns().add(column("Reference No.", 140, Report::getReferenceNo));
+        table.getColumns().add(column("Type", 100, Report::getType));
+        table.getColumns().add(column("Date Submitted", 130, Report::getDateSubmittedFormatted));
+        table.getColumns().add(column("Status", 110, r -> r.getStatus().getLabel()));
+        table.getColumns().add(column("Staff replies", 110, MyReportsPage::replySummary));
         table.getItems().addAll(ReportService.getReportsFor(user));
         table.setPlaceholder(new Label("You haven't submitted any reports yet."));
-        table.setPrefHeight(400);
+        table.setPrefHeight(300);
 
-        content.getChildren().addAll(UI.muted("View the status of your submitted reports."), table);
+        // Selecting a report shows the staff replies underneath.
+        VBox replies = new VBox(6);
+        replies.getChildren().add(UI.muted("Select a report to see replies from staff."));
+        table.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> {
+            replies.getChildren().clear();
+            if (selected == null) {
+                return;
+            }
+            replies.getChildren().add(UI.heading("Replies for " + selected.getReferenceNo(), 15));
+            if (selected.getReplies().isEmpty()) {
+                replies.getChildren().add(UI.muted("No replies yet. Staff will respond after reviewing."));
+            }
+            for (Report.Reply reply : selected.getReplies()) {
+                replies.getChildren().add(UI.panel(reply.getReaction().getSymbol() + "  "
+                        + reply.getReaction().getMeaning()
+                        + "\nFrom a staff member · " + reply.getSentFormatted()));
+            }
+        });
+
+        content.getChildren().addAll(UI.muted("View the status of your submitted reports."), table, replies);
         return content;
+    }
+
+    private static String replySummary(Report report) {
+        StringBuilder text = new StringBuilder();
+        for (Report.Reply reply : report.getReplies()) {
+            text.append(reply.getReaction().getSymbol()).append(' ');
+        }
+        return text.length() == 0 ? "—" : text.toString().trim();
     }
 
     /** Small generic helper so each column is one line instead of six. */

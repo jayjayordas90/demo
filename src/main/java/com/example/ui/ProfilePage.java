@@ -64,7 +64,7 @@ public class ProfilePage extends DashboardPage {
 
         content.getChildren().addAll(header,
                 UI.panel("Email:  " + user.getEmail() + "\nUsername:  " + user.getUsername()
-                        + "\nAccount ID:  " + user.getId()),
+                        + "\nRole:  " + user.getRole() + "\nAccount ID:  " + user.getId()),
                 stats, edit);
         return content;
     }

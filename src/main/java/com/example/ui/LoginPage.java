@@ -15,17 +15,23 @@ public class LoginPage extends AuthPage {
     private final TextField username = new TextField();
     private final PasswordField password = new PasswordField();
     private final Label error = UI.errorLabel();
+    private final Label notice = UI.errorLabel();
+    private final String noticeText;
 
-    public LoginPage(Navigator nav) {
+    public LoginPage(Navigator nav, String noticeText) {
         super(nav);
+        this.noticeText = noticeText;
     }
 
     @Override protected String title() { return "Welcome back"; }
 
-    @Override protected String subtitle() { return "Log in to view your reports and profile. (Demo: demo / demo123)"; }
+    @Override protected String subtitle() { return "Log in to continue."; }
 
     @Override
     protected Node form() {
+        if (noticeText != null) {
+            UI.showMessage(notice, noticeText, false);
+        }
         username.setPromptText("Your username");
         password.setPromptText("Your password");
 
@@ -38,7 +44,7 @@ public class LoginPage extends AuthPage {
         register.setStyle("-fx-background-color: transparent; -fx-underline: true;");
         register.setOnAction(e -> nav.showRegister());
 
-        return new VBox(12, UI.labeled("Username", username), UI.labeled("Password", password),
+        return new VBox(12, notice, UI.labeled("Username", username), UI.labeled("Password", password),
                 error, login, register);
     }
 
@@ -48,6 +54,7 @@ public class LoginPage extends AuthPage {
             Session.start(user);
             nav.showHome();
         } catch (IllegalArgumentException ex) {
+            UI.hide(notice);
             UI.showMessage(error, ex.getMessage(), true);
         }
     }

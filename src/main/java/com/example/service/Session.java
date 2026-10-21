@@ -20,4 +20,13 @@ public final class Session {
     public static boolean isLoggedIn() {
         return currentUser != null && !currentUser.isAnonymous();
     }
+
+    public static boolean isAdmin() {
+        return currentUser != null && currentUser.getRole().canManageUsers();
+    }
+
+    /** True for teachers and administrators. */
+    public static boolean canMonitor() {
+        return currentUser != null && currentUser.getRole().canMonitorReports();
+    }
 }

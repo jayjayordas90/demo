@@ -2,6 +2,7 @@ package com.example.ui;
 
 import com.example.model.Report;
 import com.example.service.Session;
+import com.example.service.UserService;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
@@ -24,30 +25,88 @@ public class Navigator {
         stage.show();
     }
 
-    /** Dashboard pages need a session (logged in or guest); otherwise go to the start screen. */
+    /** Any logged-in user or guest may open this page. */
     private void showSecured(DashboardPage page) {
-        if (Session.hasSession()) {
-            show(page);
-        } else {
+        showRestricted(page, true);
+    }
+
+    /** Only shows the page if the current user is allowed; otherwise sends them home. */
+    private void showRestricted(DashboardPage page, boolean allowed) {
+        if (!Session.hasSession()) {
             showWelcome();
+        } else if (!allowed) {
+            showHome();
+        } else {
+            show(page);
         }
     }
 
-    // ---- public screens ----
-    public void showWelcome()  { show(new WelcomePage(this)); }
-    public void showLogin()    { show(new LoginPage(this)); }
-    public void showRegister() { show(new RegistrationPage(this)); }
+    /** Before an administrator exists, nothing else is reachable. */
+    private boolean setupRequired() {
+        if (!UserService.hasAdmin()) {
+            showAdminSetup();
+            return true;
+        }
+        return false;
+    }
 
-    // ---- dashboard screens ----
-    public void showHome()      { showSecured(new HomePage(this)); }
+    // ---- public screens ----
+    public void showAdminSetup() { show(new AdminSetupPage(this)); }
+
+    public void showWelcome() {
+        if (!setupRequired()) {
+            show(new WelcomePage(this));
+        }
+    }
+
+    public void showLogin() { showLogin(null); }
+
+    public void showLogin(String notice) {
+        if (!setupRequired()) {
+            show(new LoginPage(this, notice));
+        }
+    }
+
+    public void showRegister() {
+        if (!setupRequired()) {
+            show(new RegistrationPage(this));
+        }
+    }
+
+    // ---- everyone (students, guests, staff) ----
+    // showHome() routes to the right landing page for whoever is logged in.
+    public void showHome() {
+        if (Session.canMonitor()) {
+            showSecured(new StaffDashboardPage(this));
+        } else {
+            showSecured(new HomePage(this));
+        }
+    }
+    public void showProfile()  { showSecured(new ProfilePage(this)); }
+    public void showSettings() { showSecured(new SettingsPage(this)); }
+
+    // ---- students and guests ----
     public void showMyReports() { showSecured(new MyReportsPage(this)); }
-    public void showProfile()   { showSecured(new ProfilePage(this)); }
-    public void showSettings()  { showSecured(new SettingsPage(this)); }
     public void showSafety()    { showSecured(new SafetyPage(this)); }
     public void showAbout()     { showSecured(new AboutPage(this)); }
     public void showReportForm(String incidentType) { showSecured(new ReportFormPage(this, incidentType)); }
-
     public void showConfirmation(Report report) { show(new ConfirmationPage(this, report)); }
+
+    // ---- teachers and administrators ----
+    public void showAllReports() { showAllReports(null); }
+    public void showAllReports(Report.Status filter) {
+        showRestricted(new AllReportsPage(this, filter), Session.canMonitor());
+    }
+    public void showReportDetail(Report report) {
+        showRestricted(new ReportDetailPage(this, report), Session.canMonitor());
+    }
+    public void showStaffChat() {
+        showRestricted(new ChatPage(this), Session.canMonitor());   // never for students
+    }
+
+    // ---- administrators only ----
+    public void showUserManagement() { showRestricted(new UserManagementPage(this), Session.isAdmin()); }
+    public void showActivityLog()    { showRestricted(new ActivityLogPage(this), Session.isAdmin()); }
 
     // ---- actions ----
     public void logout() {
