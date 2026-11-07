@@ -7,7 +7,7 @@
             "name": "PaperKite with JavaFX",
             "request": "launch",
             "mainClass": "com.example.PaperKite",
-            "vmArgs": "--module-path \"C:/Program Files/Java/javafx-sdk-27/lib\" --add-modules javafx.controls"
+            "vmArgs": "--module-path \"C:\\Program Files\\Java\\javafx-sdk-27.0.1\\lib\" --add-modules javafx.controls"
         }
     ]
 }

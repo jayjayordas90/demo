@@ -39,7 +39,9 @@ public class ActivityLogPage extends DashboardPage {
         action.setPrefWidth(300);
         action.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getAction()));
 
-        table.getColumns().addAll(time, actor, action);
+        table.getColumns().add(time);
+        table.getColumns().add(actor);
+        table.getColumns().add(action);
         table.getItems().addAll(ActivityLog.getAll());
         table.setPlaceholder(new Label("No activity recorded yet."));
         table.setPrefHeight(450);
